@@ -69,14 +69,14 @@ pub enum BaroError {
     DeviceErr(BaroDevError)
 }
 
-pub struct Baro <Spi<S>> {
-    let spi: SpiInterface;
+pub struct Baro {
+    spi: SpiInterface;
 }
 
 impl Baro {
     fn new(conf:SpiConfig) -> Self {
-        Self<Spi<SpiConfig>> {
-            let spi:SpiInterface = SpiInterface::generate(BARO_PIN); //Replace this with actual SPI device registration
+        Self {
+            spi:SpiInterface::generate(BARO_PIN); //Replace this with actual SPI device registration
         }
     }
     fn readRegister(reg: BaroRegister) -> Result<u8,BaroError> { //Convert the buffer madness to something more functionalish
