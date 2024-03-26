@@ -1,6 +1,6 @@
 //#![feature(error_in_core)]
 //#![feature(associated_type_defaults)]
-//#![no_std]
+#![no_std]
 
 use core::panic;
 
@@ -8,15 +8,13 @@ use embassy_executor::Executor;
 use embassy_stm32::spi::{MisoPin, MosiPin, SckPin, TxDma, RxDma, Instance};
 use embassy_stm32::{peripherals, Config};
 use spi::spi::{ EmbassySpi, SpiInstance };
-use spi::config::{SpiConfig, SpiConfigStruct};
-use crate::baro::baro::Baro;
 
 pub mod spi;
 pub mod delay;
 mod baro;
 
 pub struct Peripherals {
-    pub spi: SpiInstance<TempConfig>,
+    //pub spi: SpiInstance,
 }
 
 impl Peripherals {
@@ -28,8 +26,8 @@ impl Peripherals {
                 miso: p.PA6,
                 mosi: p.PA7,
                 dma_tx: p.DMA1_CH1,
-                dma_rx: p.DMA1_CH2
-            }),
+                dma_rx: p.DMA1_CH2,
+            })*/
         }
     }
 }
