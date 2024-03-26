@@ -76,52 +76,54 @@ pub struct Baro<S:SpiConfig> {
 }
 
 impl <S: SpiConfig> Baro<S> {
-    pub fn new(spi:Spi<S>) -> Self {
+    pub fn new(spi:SpiInstance<S>) -> Self {
         Self {
             spi:spi
         }
     }
-    fn readRegister(&mut self, reg: BaroRegister) -> Result<u8,BaroError> { //Convert the buffer madness to something more functionalish
-        let mut buf:u8 = 0u8;
-        if let Err(e) = self.spi.write(reg as u8 | 0x80) { //Send over the address with read set to 1
+    async fn readRegister(&mut self, reg: BaroRegister) -> Result<u8,BaroError> { //Convert the buffer madness to something more functionalish
+        let mut buf:[u8;1] = [0u8];
+        let wbuf:[u8;1] = [reg as u8 | 0x80];
+        if let Err(e) = self.spi.write(&wbuf).await { //Send over the address with read set to 1
             return Err(BaroError::MessageErr(e));
         }
-        if let Some(Err(e)) = self.spi.read(()) {return Err(BaroError::MessageErr(e));} //Skip dummy byte
-        if let Some(Err(e)) = self.spi.read(buf) { //Read actual data to buffer
+        if let Err(e) = self.spi.read(&mut []).await {return Err(BaroError::MessageErr(e));} //Skip dummy byte
+        if let Err(e) = self.spi.read(&mut buf).await { //Read actual data to buffer
             return Err(BaroError::MessageErr(e));
         }
-        Ok(buf)
+        Ok(buf[0])
     }
-    fn read3(&mut self, reg: BaroRegister) -> Result<[u8;4],BaroError> { //The BMP388 can read consecutive addresses without sending each address, so I added a block implementation
-        let mut buf:[u8;4] = [0u8;4];
-        if let Err(e) = self.spi.write(reg as u8 | 0x80) {
+    async fn read3(&mut self, reg: BaroRegister) -> Result<[u8;4],BaroError> { //The BMP388 can read consecutive addresses without sending each address, so I added a block implementation
+        let buf:[u8;4] = [0u8;4];
+        let wbuf:[u8;1] = [reg as u8 | 0x80];
+        if let Err(e) = self.spi.write(&wbuf).await {
             return Err(BaroError::MessageErr(e));
         }
-        if let Err(e) = self.spi.read(()) {return Err(BaroError::MessageErr(e));}
+        if let Err(e) = self.spi.read(&mut []).await {return Err(BaroError::MessageErr(e));}
         for i in 0..2 {
-            if let Err(e) = self.spi.read(buf[i]) {
+            if let Err(e) = self.spi.read(&mut [buf[i]]).await {
                 return Err(BaroError::MessageErr(e));
             }
         }
         Ok(buf)
     }
-    pub fn temp(&mut self) -> Result<u32,BaroError> { //Get the temperature in whatever units the BMP is using idc
-        match self.readRegister(BaroRegister::ErrReg) {
+    pub async fn temp(&mut self) -> Result<u32,BaroError> { //Get the temperature in whatever units the BMP is using idc
+        match self.readRegister(BaroRegister::ErrReg).await {
             Ok(n) => {
                 match n {
-                    0u8 => Ok(u32::from_le_bytes(self.read3(BaroRegister::Data3)?)),
+                    0u8 => Ok(u32::from_le_bytes(self.read3(BaroRegister::Data3).await?)),
                     _ => Err(BaroError::DeviceErr(BaroDevError::new(n)))
                 }
             }
             Err(err) => Err(err)
         }
     }
-    pub fn pres(&mut self) -> Result<u32,BaroError> {
-        match self.readRegister(BaroRegister::ErrReg) {
+    pub async fn pres(&mut self) -> Result<u32,BaroError> {
+        match self.readRegister(BaroRegister::ErrReg).await {
             Ok(n) => {
                 match n {
                     0u8 => {
-                        Ok(u32::from_le_bytes(self.read3(BaroRegister::Data0)?))
+                        Ok(u32::from_le_bytes(self.read3(BaroRegister::Data0).await?))
                     }
                     _ => Err(BaroError::DeviceErr(BaroDevError::new(n)))
                 }
@@ -129,12 +131,12 @@ impl <S: SpiConfig> Baro<S> {
             Err(err) => Err(err)
         }
     }
-    pub fn sensorTime(&mut self) -> Result<u32,BaroError> {
-        match self.readRegister(BaroRegister::ErrReg) {
+    pub async fn sensorTime(&mut self) -> Result<u32,BaroError> {
+        match self.readRegister(BaroRegister::ErrReg).await {
             Ok(n) => {
                 match n {
                     0u8 => {
-                        Ok(u32::from_le_bytes(self.read3(BaroRegister::SensorTime0)?))
+                        Ok(u32::from_le_bytes(self.read3(BaroRegister::SensorTime0).await?))
                     }
                     _ => Err(BaroError::DeviceErr(BaroDevError::new(n)))
                 }
