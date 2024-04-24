@@ -1,4 +1,4 @@
-use crate::spi::spi::SpiInstance;
+use crate::spi::spi::Spi;
 use crate::spi::spi::SpiError;
 use crate::spi::config::SpiConfig;
 use embedded_hal_async::spi::SpiBus;
@@ -72,11 +72,11 @@ pub enum BaroError {
 }
 
 pub struct Baro<S:SpiConfig> {
-    spi: SpiInstance<S>
+    spi: Spi<S>
 }
 
 impl <S: SpiConfig> Baro<S> {
-    pub fn new(spi:SpiInstance<S>) -> Self {
+    pub fn new(spi:Spi<S>) -> Self {
         Self {
             spi:spi
         }
