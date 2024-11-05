@@ -51,12 +51,15 @@ async fn main_task(sirin: &'static mut Sirin) {
     }.unwrap();
 
     loop {
-        //info!("Sending 0x02");
-        let buf = [0x02u8];
-        uart3.blocking_write(&buf).unwrap();
-        let mut response = [0u8; 256];
-        let _ = uart3.read_until_idle(&mut response).await;
-        info!("Read {:x}", response);
+        // //info!("Sending 0x02");
+        // let buf = [0x02u8];
+        // uart3.blocking_write(&buf).unwrap();
+        // let mut response = [0u8; 256];
+        // let _ = uart3.read_until_idle(&mut response).await;
+        let data = [1,1,1,1,1,1,1,1,1,1,1];
+        sirin.radio.transmit(&data).await.unwrap();
+        info!("Transmitted data");
+        
         Timer::after_millis(500).await;
     }
 
