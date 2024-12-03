@@ -8,6 +8,7 @@ use defmt::*;
 use embassy_executor::{task, Executor, Spawner};
 use embassy_stm32::{bind_interrupts, dma::NoDma, gpio::{Level, Output, Speed}, peripherals::{self, DMA1_CH0, DMA1_CH1, PD8, PD9, USART3}, usart::{self, Config, Uart}};
 use embassy_time::Timer;
+use rfm9x::ReadRfm9x;
 use {defmt_rtt as _, panic_probe as _};
 use sirin::Sirin;
 
@@ -42,7 +43,23 @@ bind_interrupts!(struct Irqs {
 });
 
 async fn main_task(sirin: &'static mut Sirin) {
-    let usart3 = unsafe {
+
+    sirin.radio.set_mode(rfm9x::Mode::Sleep).await.unwrap();
+    sirin.radio.set_mode(rfm9x::Mode::Stdby).await.unwrap();
+
+    println!("Mode: {}", sirin.radio.mode().await.unwrap());
+
+    println!("Version: 0x{:x}", sirin.radio.version().await.unwrap());
+
+    loop {
+        sirin.radio.transmit(&[0x80, 0x00, 0x01, 0x02, 0x03]).await.unwrap();
+
+        println!("Sent msg");
+
+        Timer::after_millis(500).await
+    }
+
+    /*let usart3 = unsafe {
         USART3::steal()
     };
 
@@ -51,17 +68,54 @@ async fn main_task(sirin: &'static mut Sirin) {
     }.unwrap();
 
     loop {
-        // //info!("Sending 0x02");
-        // let buf = [0x02u8];
-        // uart3.blocking_write(&buf).unwrap();
-        // let mut response = [0u8; 256];
-        // let _ = uart3.read_until_idle(&mut response).await;
-        let data = [1,1,1,1,1,1,1,1,1,1,1];
-        sirin.radio.transmit(&data).await.unwrap();
-        info!("Transmitted data");
-        
-        Timer::after_millis(500).await;
-    }
+        let mut response = [0u8; 1024];
+        let _ = uart3.read_until_idle(&mut response).await;
+
+        let mut k = 0;
+        while response[k] == 0xA0 && response[k + 1] == 0x0A1 {
+            let len = ((response[k + 2] as u16) << 8) + response[k + 3] as u16;
+            //info!("{:x}", &response[k..((len + 7) as usize + k)]);
+            let id = response[k + 4];
+            
+            match id {
+                0xDF => {
+                    let msg = match response[k + 6] {
+                        0x00 => "no fix",
+                        0x01 => "fix prediction",
+                        0x02 => "2d fix",
+                        0x03 => "3d fix",
+                        0x04 => "differential fix",
+                        _ => "unknown"
+                    };
+                    
+                    info!("fix status: {} ({})", msg, response[k + 6])
+                },
+                0xDE => {
+                    let nsvs = response[k + 6];
+                    let chsize = 8;
+                    for i in 0..nsvs {
+                        let offset = k + 7 + (chsize as usize * i as usize);
+                        let chid = response[offset];
+                        let svid = response[offset + 1];
+                        let status = response[offset + 2];
+
+                        let almanac = status & 0b001 > 0;
+                        let ephemeris = status & 0b010 > 0;
+                        let healthy = status & 0b100 > 0;
+
+                        info!(
+                            "GPS (chid: {}, svid: {}): [{}] almanac, [{}] ephemeris, [{}] healthy", 
+                            chid, svid, almanac, ephemeris, healthy
+                        )
+                    }
+                    info!("{} satellites total", nsvs)
+                },
+                _ => {}
+            }
+
+            k += len as usize + 7;
+        }
+    }*/
 
     /*loop {
         /*info!("Reading data...");

@@ -38,6 +38,7 @@ static_cell = "2"
 chrono = { version = "^0.4", default-features = false }
 sirin = { version = "0.1.0", path = "../Sirin/sirin" }
 bmp3 = { version = "0.1.0", path = "../bmp3" }
+rfm9x = { version = "0.1.0", path = "../rfm9x", features = ['defmt'] }
 #panic-halt = "0.2.0"
 
 [[bin]]
