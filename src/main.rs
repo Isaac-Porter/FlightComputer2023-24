@@ -9,8 +9,10 @@ use embassy_executor::{task, Executor, Spawner};
 use embassy_stm32::{bind_interrupts, dma::NoDma, gpio::{Level, Output, Speed}, peripherals::{self, DMA1_CH0, DMA1_CH1, PD8, PD9, USART3}, usart::{self, Config, Uart}};
 use embassy_time::Timer;
 use rfm9x::ReadRfm9x;
+use rfm9x::WriteRfm9x;
 use {defmt_rtt as _, panic_probe as _};
 use sirin::Sirin;
+use w25q::Logger;
 
 unsafe fn transmute_into_static<T>(item: &mut T) -> &'static mut T {
     core::mem::transmute(item)
@@ -43,21 +45,41 @@ bind_interrupts!(struct Irqs {
 });
 
 async fn main_task(sirin: &'static mut Sirin) {
+    
+    let id = sirin.flash.read_device_id().await.unwrap();
+    println!("id: {}", id);
+    let mut logger = Logger::new();
 
-    sirin.radio.set_mode(rfm9x::Mode::Sleep).await.unwrap();
-    sirin.radio.set_mode(rfm9x::Mode::Stdby).await.unwrap();
+    let message = &[1, 2, 3, 4];
+    // logger.log(&mut sirin.flash, message);
 
-    println!("Mode: {}", sirin.radio.mode().await.unwrap());
+    sirin.flash.write_enable().await;
+    // sirin.flash.sector_erase(199).await;
+    let data_in = [100, 19, 20, 50];
+    sirin.flash.page(0x0000100, &data_in).await;
+    let mut data = [0u8; 256];
+    sirin.flash.read_data(0x0000100, &mut data).await;
 
-    println!("Version: 0x{:x}", sirin.radio.version().await.unwrap());
+    println!("{}", data);
+    // sirin.radio.set_mode(rfm9x::Mode::Sleep).await.unwrap();
+    // sirin.radio.set_mode(rfm9x::Mode::Stdby).await.unwrap();
 
-    loop {
-        sirin.radio.transmit(&[0x80, 0x00, 0x01, 0x02, 0x03]).await.unwrap();
+    // println!("Mode: {}", sirin.radio.mode().await.unwrap());
 
-        println!("Sent msg");
+    // println!("Version: 0x{:x}", sirin.radio.version().await.unwrap());
 
-        Timer::after_millis(500).await
-    }
+    // sirin.radio.write_reg(0x06, 0b10100001).await.unwrap();
+    // Timer::after_millis(100).await;
+    // let mut result:u8 = sirin.radio.read_reg(0x06).await.unwrap();
+    // println!("{:b}",result);
+    
+    // loop {
+    //     sirin.radio.transmit(&[0x80, 0x00, 0x01, 0x02, 0x03]).await.unwrap();
+
+    //     println!("Sent msg");
+    //     println!("{}", sirin.radio.mode().await.unwrap());
+    //     Timer::after_millis(500).await
+    // }
 
     /*let usart3 = unsafe {
         USART3::steal()
