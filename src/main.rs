@@ -8,6 +8,7 @@ use defmt::*;
 use embassy_executor::{task, Executor, Spawner};
 use embassy_stm32::{bind_interrupts, dma::NoDma, gpio::{Level, Output, Speed}, peripherals::{self, DMA1_CH0, DMA1_CH1, PD8, PD9, USART3}, usart::{self, Config, Uart}};
 use embassy_time::Timer;
+use lsm6dso::ReadLsm6dso;
 use rfm9x::ReadRfm9x;
 use rfm9x::WriteRfm9x;
 use {defmt_rtt as _, panic_probe as _};
@@ -46,6 +47,13 @@ bind_interrupts!(struct Irqs {
 
 async fn main_task(sirin: &'static mut Sirin) {
     
+    loop {
+        println!("accel: {}", sirin.imu.accel().await.unwrap());
+        println!("gyro: {}", sirin.imu.gyro().await.unwrap());
+    }
+
+
+    /*
     let id = sirin.flash.read_device_id().await.unwrap();
     println!("id: {}", id);
     let mut logger = Logger::new();
@@ -80,6 +88,7 @@ async fn main_task(sirin: &'static mut Sirin) {
     //     println!("{}", sirin.radio.mode().await.unwrap());
     //     Timer::after_millis(500).await
     // }
+    */
 
     /*let usart3 = unsafe {
         USART3::steal()

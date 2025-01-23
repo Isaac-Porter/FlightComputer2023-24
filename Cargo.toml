@@ -40,6 +40,7 @@ sirin = { version = "0.1.0", path = "../Sirin/sirin" }
 bmp3 = { version = "0.1.0", path = "../bmp3" }
 rfm9x = { version = "0.1.0", path = "../rfm9x", features = ['defmt'] }
 w25q = { version = "0.1.0", path = "../w25q" }
+lsm6dso = { version = "0.1.0", path = "../lsm6dso" }
 #panic-halt = "0.2.0"
 
 [[bin]]
